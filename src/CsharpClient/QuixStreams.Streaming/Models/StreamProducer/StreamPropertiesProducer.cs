@@ -13,7 +13,7 @@ namespace QuixStreams.Streaming.Models.StreamProducer
     /// Represents properties and metadata of the stream.
     /// All changes to these properties are automatically published to the underlying stream.
     /// </summary>
-    public class StreamPropertiesProducer : IDisposable
+    public class StreamPropertiesProducer : IStreamPropertiesProducer
     {
         private readonly IStreamProducerInternal streamProducer;
         private string name;

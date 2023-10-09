@@ -12,7 +12,7 @@ namespace QuixStreams.Streaming.Models.StreamProducer
     /// <summary>
     /// Helper class for producing <see cref="ParameterDefinition"/> and <see cref="TimeseriesData"/>
     /// </summary>
-    public class StreamTimeseriesProducer : IDisposable
+    public class StreamTimeseriesProducer : IStreamTimeseriesProducer
     {
         private readonly IStreamProducerInternal streamProducer;
 

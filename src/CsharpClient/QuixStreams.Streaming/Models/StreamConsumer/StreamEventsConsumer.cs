@@ -8,7 +8,7 @@ namespace QuixStreams.Streaming.Models.StreamConsumer
     /// <summary>
     /// Consumer for streams, which raises <see cref="EventData"/> and <see cref="EventDefinitions"/> related messages
     /// </summary>
-    public class StreamEventsConsumer : IDisposable
+    public class StreamEventsConsumer : IStreamEventsConsumer
     {
         private readonly ITopicConsumer topicConsumer;
         private readonly IStreamConsumerInternal streamConsumer;

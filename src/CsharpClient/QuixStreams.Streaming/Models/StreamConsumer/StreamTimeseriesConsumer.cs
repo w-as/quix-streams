@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using QuixStreams.Telemetry.Models;
@@ -8,7 +8,7 @@ namespace QuixStreams.Streaming.Models.StreamConsumer
     /// <summary>
     /// Consumer for streams, which raises <see cref="TimeseriesData"/> and <see cref="ParameterDefinitions"/> related messages
     /// </summary>
-    public class StreamTimeseriesConsumer : IDisposable
+    public class StreamTimeseriesConsumer : IStreamTimeseriesConsumer
     {
         private readonly ITopicConsumer topicConsumer;
         private readonly IStreamConsumerInternal streamConsumer;

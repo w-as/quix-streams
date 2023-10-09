@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -14,7 +14,7 @@ namespace QuixStreams.Streaming.Models.StreamProducer
     /// <summary>
     /// Helper class for producing <see cref="EventDefinitions"/> and <see cref="EventData"/>
     /// </summary>
-    public class StreamEventsProducer : IDisposable
+    public class StreamEventsProducer : IStreamEventsProducer
     {
         private readonly ILogger logger = QuixStreams.Logging.CreateLogger<StreamEventsProducer>();
         private readonly IStreamProducerInternal streamProducer;

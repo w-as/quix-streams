@@ -8,7 +8,7 @@ namespace QuixStreams.Streaming.Models.StreamConsumer
     /// Represents properties and metadata of the stream.
     /// All changes to these properties are automatically populated to this class.
     /// </summary>
-    public class StreamPropertiesConsumer : IDisposable
+    public class StreamPropertiesConsumer : IStreamPropertiesConsumer
     {
         private readonly ITopicConsumer topicConsumer;
         private readonly IStreamConsumerInternal streamConsumer;
