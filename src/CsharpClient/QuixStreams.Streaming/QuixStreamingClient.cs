@@ -15,7 +15,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using QuixStreams;
 using QuixStreams.Kafka.Transport;
 using QuixStreams.Streaming.Configuration;
 using QuixStreams.Streaming.Exceptions;
@@ -29,7 +28,7 @@ using QuixStreams.Telemetry.Kafka;
 
 namespace QuixStreams.Streaming
 {
-    public interface IQuixStreamingClient
+    public interface IQuixStreamingClient : IQuixStreamingClientAsync
     {
         /// <summary>
         /// Gets a topic consumer capable of subscribing to receive incoming streams.
@@ -63,6 +62,42 @@ namespace QuixStreams.Streaming
         /// <param name="topicIdOrName">Id or name of the topic. If name is provided, workspace will be derived from environment variable or token, in that order</param>
         /// <returns>Instance of <see cref="ITopicProducer"/></returns>
         ITopicProducer GetTopicProducer(string topicIdOrName);
+    }
+
+    public interface IQuixStreamingClientAsync
+    {
+        /// <summary>
+        /// Asynchronously gets a topic consumer capable of subscribing to receive incoming streams.
+        /// </summary>
+        /// <param name="topicIdOrName">Id or name of the topic. If name is provided, workspace will be derived from environment variable or token, in that order</param>
+        /// <param name="consumerGroup">The consumer group id to use for consuming messages. If null, consumer group is not used and only consuming new messages.</param>
+        /// <param name="options">The settings to use for committing</param>
+        /// <param name="autoOffset">The offset to use when there is no saved offset for the consumer group.</param>
+        /// <returns>A task returning an instance of <see cref="ITopicConsumer"/></returns>
+        Task<ITopicConsumer> GetTopicConsumerAsync(string topicIdOrName, string consumerGroup = null, CommitOptions options = null, AutoOffsetReset autoOffset = AutoOffsetReset.Latest);
+
+        /// <summary>
+        /// Asynchronously gets a topic consumer capable of subscribing to receive non-quixstreams incoming messages.
+        /// </summary>
+        /// <param name="topicIdOrName">Id or name of the topic. If name is provided, workspace will be derived from environment variable or token, in that order</param>
+        /// <param name="consumerGroup">The consumer group id to use for consuming messages. If null, consumer group is not used and only consuming new messages.</param>
+        /// <param name="autoOffset">The offset to use when there is no saved offset for the consumer group.</param>
+        /// <returns>A task returning an instance of <see cref="IRawTopicConsumer"/></returns>
+        Task<IRawTopicConsumer> GetRawTopicConsumerAsync(string topicIdOrName, string consumerGroup = null, AutoOffsetReset? autoOffset = null);
+
+        /// <summary>
+        /// Asynchronously gets a topic producer capable of publishing non-quixstreams messages.
+        /// </summary>
+        /// <param name="topicIdOrName">Id or name of the topic. If name is provided, workspace will be derived from environment variable or token, in that order</param>
+        /// <returns>A task returning an instance of <see cref="IRawTopicProducer"/></returns>
+        Task<IRawTopicProducer> GetRawTopicProducerAsync(string topicIdOrName);
+
+        /// <summary>
+        /// Asynchronously gets a topic producer capable of publishing stream messages.
+        /// </summary>
+        /// <param name="topicIdOrName">Id or name of the topic. If name is provided, workspace will be derived from environment variable or token, in that order</param>
+        /// <returns>A task returning an instance of <see cref="ITopicProducer"/></returns>
+        Task<ITopicProducer> GetTopicProducerAsync(string topicIdOrName);
     }
 
     /// <summary>
@@ -163,6 +198,17 @@ namespace QuixStreams.Streaming
             return client.GetTopicConsumer(topicId, consumerGroup, options, autoOffset);
         }
 
+        /// <inheritdoc/>
+        public async Task<ITopicConsumer> GetTopicConsumerAsync(string topicIdOrName, string consumerGroup = null, CommitOptions options = null, AutoOffsetReset autoOffset = AutoOffsetReset.Latest)
+        {
+            if (string.IsNullOrWhiteSpace(topicIdOrName)) throw new ArgumentNullException(nameof(topicIdOrName));
+
+            var (client, topicId, ws) = await this.ValidateTopicAndCreateClient(topicIdOrName).ConfigureAwait(false);
+            (consumerGroup, options) = await GetValidConsumerGroup(topicIdOrName, consumerGroup, options).ConfigureAwait(false);
+
+            return client.GetTopicConsumer(topicId, consumerGroup, options, autoOffset);
+        }
+
         /// <summary>
         /// Gets a topic consumer capable of subscribing to receive non-quixstreams incoming messages. 
         /// </summary>
@@ -180,6 +226,17 @@ namespace QuixStreams.Streaming
             return client.GetRawTopicConsumer(topicId, consumerGroup, autoOffset);
         }
 
+        /// <inheritdoc/>
+        public async Task<IRawTopicConsumer> GetRawTopicConsumerAsync(string topicIdOrName, string consumerGroup = null, AutoOffsetReset? autoOffset = null)
+        {
+            if (string.IsNullOrWhiteSpace(topicIdOrName)) throw new ArgumentNullException(nameof(topicIdOrName));
+
+            var (client, topicId, _) = await this.ValidateTopicAndCreateClient(topicIdOrName).ConfigureAwait(false);
+            (consumerGroup, _) = await GetValidConsumerGroup(topicIdOrName, consumerGroup, null).ConfigureAwait(false);
+
+            return client.GetRawTopicConsumer(topicId, consumerGroup, autoOffset);
+        }
+
         /// <summary>
         /// Gets a topic producer capable of publishing non-quixstreams messages. 
         /// </summary>
@@ -193,7 +250,17 @@ namespace QuixStreams.Streaming
 
             return client.GetRawTopicProducer(topicId);
         }
-        
+
+        /// <inheritdoc/>
+        public async Task<IRawTopicProducer> GetRawTopicProducerAsync(string topicIdOrName)
+        {
+            if (string.IsNullOrWhiteSpace(topicIdOrName)) throw new ArgumentNullException(nameof(topicIdOrName));
+
+            var (client, topicId, _) = await this.ValidateTopicAndCreateClient(topicIdOrName).ConfigureAwait(false);
+
+            return client.GetRawTopicProducer(topicId);
+        }
+
         /// <summary>
         /// Gets a topic producer capable of publishing stream messages.
         /// </summary>
@@ -204,6 +271,16 @@ namespace QuixStreams.Streaming
             if (string.IsNullOrWhiteSpace(topicIdOrName)) throw new ArgumentNullException(nameof(topicIdOrName));
 
             var (client, topicId, _) = this.ValidateTopicAndCreateClient(topicIdOrName).ConfigureAwait(false).GetAwaiter().GetResult();
+
+            return client.GetTopicProducer(topicId);
+        }
+
+        /// <inheritdoc/>
+        public async Task<ITopicProducer> GetTopicProducerAsync(string topicIdOrName)
+        {
+            if (string.IsNullOrWhiteSpace(topicIdOrName)) throw new ArgumentNullException(nameof(topicIdOrName));
+
+            var (client, topicId, _) = await this.ValidateTopicAndCreateClient(topicIdOrName);
 
             return client.GetTopicProducer(topicId);
         }
